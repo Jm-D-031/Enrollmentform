@@ -1,0 +1,122 @@
+{% extends "students/base.html" %}
+{% block title %}Student profiles – Enrollment{% endblock %}
+{% block body %}
+<header class="topbar">
+  <div class="brand"><span class="dot"></span>Enrollment</div>
+  <div class="class-info">
+    <form method="get">
+      <select name="class" onchange="this.form.submit()" aria-label="Choose class">
+        {% for c in classes %}<option value="{{ c.id }}" {% if c == current %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </form>
+    <span class="muted">{{ total }} student{{ total|pluralize }}</span>
+    <a class="admin-login" href="/admin/login/">Login as admin</a>
+  </div>
+</header>
+
+<main class="layout {% if selected %}show-profile{% endif %}">
+  <aside class="list-pane">
+    <form method="get" class="search">
+      <input type="hidden" name="class" value="{{ current.id }}">
+      <input name="q" value="{{ q }}" type="search" placeholder="Search by name or ID" aria-label="Search students">
+    </form>
+    <ul class="student-list">
+      {% for s in students %}
+      <li>
+        <a class="student {% if selected and s.id == selected.id %}active{% endif %}"
+           href="?class={{ current.id }}&student={{ s.id }}{% if q %}&q={{ q|urlencode }}{% endif %}">
+          <div class="avatar">{{ s.initials }}</div>
+          <div><div class="name">{{ s.last_name }}, {{ s.first_name }}</div><div class="sub">{{ s.student_id }}</div></div>
+        </a>
+      </li>
+      {% empty %}
+      <li class="empty">{% if q %}No student matches “{{ q }}”.{% else %}No students in this class yet. <a href="/admin/students/student/add/">Add one</a>.{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  <section class="profile-pane">
+    {% if selected %}
+      {% with s=selected %}
+      <a class="back" href="?class={{ current.id }}">Back to list</a>
+      <div class="p-head">
+        <div class="avatar">{{ s.initials }}</div>
+        <div>
+          <h1>{{ s.full_name }}</h1>
+          <div class="p-meta"><span>{{ s.student_id }}</span><span>{{ s.school_class }}</span>
+            <span class="chip {% if s.status == 'Pending' %}pending{% endif %}">{{ s.status }}</span></div>
+        </div>
+      </div>
+
+      <nav class="tabs">
+        {% for key, label in tabs %}
+        <a class="tab {% if tab == key %}active{% endif %}" href="?class={{ current.id }}&student={{ s.id }}&tab={{ key }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </nav>
+
+      {% if tab == "personal" %}
+      <dl class="grid">
+        <div class="field"><dt>First name</dt><dd>{{ s.first_name }}</dd></div>
+        <div class="field"><dt>Middle name</dt><dd>{{ s.middle_name|default:"—" }}</dd></div>
+        <div class="field"><dt>Last name</dt><dd>{{ s.last_name }}</dd></div>
+        <div class="field"><dt>Birthdate</dt><dd>{{ s.birthdate|date:"F j, Y" }}</dd></div>
+        <div class="field"><dt>Age</dt><dd>{{ s.age }}</dd></div>
+        <div class="field"><dt>Gender</dt><dd>{{ s.gender }}</dd></div>
+        <div class="field"><dt>Nationality</dt><dd>{{ s.nationality }}</dd></div>
+        <div class="field"><dt>Religion</dt><dd>{{ s.religion|default:"—" }}</dd></div>
+        <div class="field"><dt>Email</dt><dd>{{ s.email|default:"—" }}</dd></div>
+        <div class="field"><dt>Phone</dt><dd>{{ s.phone|default:"—" }}</dd></div>
+        <div class="field full"><dt>Home address</dt><dd>{{ s.address|default:"—" }}</dd></div>
+      </dl>
+
+      {% elif tab == "background" %}
+      <dl class="grid">
+        <div class="sect">Family</div>
+        <div class="field"><dt>Father</dt><dd>{{ s.father_name|default:"—" }}</dd></div>
+        <div class="field"><dt>Father’s occupation</dt><dd>{{ s.father_job|default:"—" }}</dd></div>
+        <div class="field"><dt>Mother</dt><dd>{{ s.mother_name|default:"—" }}</dd></div>
+        <div class="field"><dt>Mother’s occupation</dt><dd>{{ s.mother_job|default:"—" }}</dd></div>
+        <div class="field"><dt>Siblings</dt><dd>{{ s.siblings }}</dd></div>
+        <div class="sect">Guardian</div>
+        <div class="field"><dt>Guardian</dt><dd>{{ s.guardian_name|default:"—" }}</dd></div>
+        <div class="field"><dt>Contact number</dt><dd>{{ s.guardian_phone|default:"—" }}</dd></div>
+        <div class="sect">Previous school</div>
+        <div class="field"><dt>School</dt><dd>{{ s.previous_school|default:"—" }}</dd></div>
+        <div class="field"><dt>Last grade completed</dt><dd>{{ s.last_grade_completed|default:"—" }}</dd></div>
+      </dl>
+
+      {% elif tab == "academic" %}
+      <dl class="grid spaced">
+        <div class="field"><dt>General weighted average</dt><dd>{{ s.average|default:"—" }}</dd></div>
+        <div class="field"><dt>Previous school</dt><dd>{{ s.previous_school|default:"—" }}</dd></div>
+      </dl>
+      <table>
+        <thead><tr><th>Subject</th><th>Grade</th></tr></thead>
+        <tbody>
+          {% for g in s.grades.all %}<tr><td>{{ g.subject }}</td><td class="grade">{{ g.score }}</td></tr>
+          {% empty %}<tr><td colspan="2" class="muted">No grades recorded.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+
+      {% else %}
+      <dl class="grid spaced">
+        <div class="field"><dt>Date enrolled</dt><dd>{{ s.enrolled_on|date:"F j, Y" }}</dd></div>
+        <div class="field"><dt>Payment</dt><dd>{{ s.payment }}</dd></div>
+        <div class="field"><dt>Class</dt><dd>{{ s.school_class }}</dd></div>
+        <div class="field"><dt>Status</dt><dd>{{ s.status }}</dd></div>
+      </dl>
+      <ul class="docs">
+        {% for d in s.documents.all %}
+        <li><span>{{ d.name }}</span><span class="{% if d.submitted %}ok{% else %}miss{% endif %}">{% if d.submitted %}Submitted{% else %}Missing{% endif %}</span></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <p class="edit"><a href="/admin/students/student/{{ s.id }}/change/">Edit this student</a></p>
+      {% endwith %}
+    {% else %}
+      <div class="placeholder"><div><b>Select a student</b>Choose a name from the list to see their full profile.</div></div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}
